@@ -1,0 +1,6 @@
+transformers>=4.40.0
+datasets
+psutil
+accelerate
+wandb
+torch>=2.1.0
