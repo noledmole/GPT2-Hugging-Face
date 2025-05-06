@@ -34,6 +34,14 @@ dataset_path = '/mnt/spotify_data/spotify_dataset.csv'
 python3 scripts/train.py --size 10000
 ```
 
+## Train on Varying Dataset Sizes
+```
+python3 scripts/train.py --size 10000
+python3 scripts/train.py --size 15000
+python3 scripts/train.py --size 20000
+python3 scripts/train.py --size 25000
+```
+
 ## Monitor Resources (Optional)
 ```
 python3 scripts/monitor.py
