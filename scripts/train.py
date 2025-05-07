@@ -3,14 +3,25 @@ import time
 import argparse
 import psutil
 import pandas as pd
+import kagglehub
 from datasets import Dataset
 from transformers import (AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorForLanguageModeling)
 
 
-def load_sample_dataset(csv_path: str, sample_size: int) -> Dataset:
+def load_sample_dataset(sample_size: int) -> Dataset:
+    print("Downloading dataset from Kaggle...")
+    data_dir = kagglehub.dataset_download("devdope/900k-spotify")
+    print(f"Dataset downloaded to: {data_dir}")
+
+    csv_path = os.path.join(data_dir, "tracks.csv")
+    print(f"Reading CSV file from: {csv_path}")
     df = pd.read_csv(csv_path)
+    print(f"Total rows in dataset: {len(df)}")
+
     df_sample = df.sample(n=sample_size, random_state=42)
     df_sample['text'] = df_sample['track_name'] + ' - ' + df_sample['artist_name']
+    print(f"Sampled {sample_size} rows")
+
     return Dataset.from_pandas(df_sample[['text']])
 
 
@@ -25,13 +36,12 @@ def monitor_resources():
 
 
 def train_model(sample_size: int):
-    dataset_path = os.path.join('data', 'spotify_dataset.csv')
     output_dir = os.path.join('models', f'gpt2-spotify-{sample_size}')
 
     tokenizer = AutoTokenizer.from_pretrained('gpt2')
     model = AutoModelForCausalLM.from_pretrained('gpt2')
 
-    dataset = load_sample_dataset(dataset_path, sample_size)
+    dataset = load_sample_dataset(sample_size)
     tokenized_dataset = dataset.map(lambda x: tokenize_function(x, tokenizer), batched=True)
 
     data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
