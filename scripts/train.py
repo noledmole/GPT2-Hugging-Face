@@ -1,93 +1,65 @@
-import os
-import time
 import argparse
-import psutil
-from datasets import Dataset, load_dataset
-from transformers import (AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorForLanguageModeling)
-import subprocess
+from datasets import load_dataset
+from transformers import (
+    AutoTokenizer,
+    AutoModelForCausalLM,
+    Trainer,
+    TrainingArguments,
+    DataCollatorForLanguageModeling
+)
 
-
-def load_sample_dataset(sample_size: int) -> Dataset:
-    print("Loading dataset from Hugging Face Hub...")
+def load_sample_dataset(sample_size: int):
     ds = load_dataset("noelmurti/spotify_data", split="train")
-    print(f"Loaded {len(ds)} rows from HF")
-
-    ds = ds.shuffle(seed=42).select(range(sample_size))
-    ds = ds.map(lambda row: {"text": row["track_name"] + " - " + row["artist_name"]})
-    return ds
-
-
-def tokenize_function(examples, tokenizer):
-    return tokenizer(examples['text'], truncation=True, padding="max_length", max_length=128)
-
-
-def monitor_resources():
-    import subprocess
-    cpu = psutil.cpu_percent()
-    mem = psutil.virtual_memory().percent
-    try:
-        nvidia_output = subprocess.check_output(
-            ['nvidia-smi', '--query-gpu=utilization.gpu,memory.used', '--format=csv,nounits,noheader']
-        ).decode().strip()
-        gpu_util, gpu_mem = map(int, nvidia_output.split(','))
-    except:
-        gpu_util, gpu_mem = -1, -1
-    return cpu, mem, gpu_util, gpu_mem
-
+    ds = ds.filter(lambda row: row.get("song") and row.get("Artist(s)"))
+    ds = ds.map(lambda row: {"text": f"{row['song']} - {row['Artist(s)']}"})
+    return ds.shuffle(seed=42).select(range(min(sample_size, len(ds))))
 
 def train_model(sample_size: int):
-    output_dir = os.path.join('models', f'gpt2-spotify-{sample_size}')
-
-    tokenizer = AutoTokenizer.from_pretrained('gpt2')
-    model = AutoModelForCausalLM.from_pretrained('gpt2')
-
     dataset = load_sample_dataset(sample_size)
-    tokenized_dataset = dataset.map(lambda x: tokenize_function(x, tokenizer), batched=True)
 
-    data_collator = DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False)
+    tokenizer = AutoTokenizer.from_pretrained("gpt2")
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+
+    model = AutoModelForCausalLM.from_pretrained("gpt2")
+
+    def tokenize_function(examples):
+        return tokenizer(examples["text"], truncation=True, padding="max_length", max_length=128)
+
+    tokenized_dataset = dataset.map(tokenize_function, batched=True)
+
+    data_collator = DataCollatorForLanguageModeling(
+        tokenizer=tokenizer, mlm=False
+    )
 
     training_args = TrainingArguments(
-        output_dir=output_dir,
+        output_dir="./models/gpt2-spotify",
         overwrite_output_dir=True,
-        num_train_epochs=3,
         per_device_train_batch_size=8,
+        num_train_epochs=3,
         save_steps=500,
-        save_total_limit=1,
-        logging_steps=50,
-        evaluation_strategy="no",
+        save_total_limit=2,
+        logging_dir="./logs",
+        logging_steps=100,
         report_to="none",
+        run_name="gpt2-spotify-run"
     )
 
     trainer = Trainer(
         model=model,
         args=training_args,
         train_dataset=tokenized_dataset,
+        tokenizer=tokenizer,
         data_collator=data_collator,
     )
 
-    start_time = time.time()
-    cpu_start, mem_start, gpu_start, gpumem_start = monitor_resources()
-
     trainer.train()
-
-    end_time = time.time()
-    cpu_end, mem_end, gpu_end, gpumem_end = monitor_resources()
-
-    training_time = round(end_time - start_time, 2)
-    print(f"Training time for {sample_size} samples: {training_time}s")
-
-    os.makedirs('logs', exist_ok=True)
-    log_path = os.path.join('logs', 'training_times.csv')
-    with open(log_path, 'a') as f:
-        f.write(f"{sample_size},{training_time},{cpu_start},{cpu_end},{mem_start},{mem_end},{gpu_start},{gpu_end},{gpumem_start},{gpumem_end}\n")
-
-    model.save_pretrained(output_dir)
-    tokenizer.save_pretrained(output_dir)
-
+    model.save_pretrained("./models/gpt2-spotify")
+    tokenizer.save_pretrained("./models/gpt2-spotify")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--size', type=int, default=10000, help='Sample size of Spotify dataset')
+    parser.add_argument("--size", type=int, default=10000, help="Sample size from dataset")
     args = parser.parse_args()
-
     train_model(args.size)
+
