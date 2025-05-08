@@ -2,27 +2,19 @@ import os
 import time
 import argparse
 import psutil
-import pandas as pd
-import kagglehub
-from datasets import Dataset
+from datasets import Dataset, load_dataset
 from transformers import (AutoTokenizer, AutoModelForCausalLM, Trainer, TrainingArguments, DataCollatorForLanguageModeling)
+import subprocess
 
 
 def load_sample_dataset(sample_size: int) -> Dataset:
-    print("Downloading dataset from Kaggle...")
-    data_dir = kagglehub.dataset_download("devdope/900k-spotify")
-    print(f"Dataset downloaded to: {data_dir}")
+    print("Loading dataset from Hugging Face Hub...")
+    ds = load_dataset("noelmurti/spotify_data", split="train")
+    print(f"Loaded {len(ds)} rows from HF")
 
-    csv_path = os.path.join(data_dir, "tracks.csv")
-    print(f"Reading CSV file from: {csv_path}")
-    df = pd.read_csv(csv_path)
-    print(f"Total rows in dataset: {len(df)}")
-
-    df_sample = df.sample(n=sample_size, random_state=42)
-    df_sample['text'] = df_sample['track_name'] + ' - ' + df_sample['artist_name']
-    print(f"Sampled {sample_size} rows")
-
-    return Dataset.from_pandas(df_sample[['text']])
+    ds = ds.shuffle(seed=42).select(range(sample_size))
+    ds = ds.map(lambda row: {"text": row["track_name"] + " - " + row["artist_name"]})
+    return ds
 
 
 def tokenize_function(examples, tokenizer):
@@ -30,9 +22,17 @@ def tokenize_function(examples, tokenizer):
 
 
 def monitor_resources():
+    import subprocess
     cpu = psutil.cpu_percent()
     mem = psutil.virtual_memory().percent
-    return cpu, mem
+    try:
+        nvidia_output = subprocess.check_output(
+            ['nvidia-smi', '--query-gpu=utilization.gpu,memory.used', '--format=csv,nounits,noheader']
+        ).decode().strip()
+        gpu_util, gpu_mem = map(int, nvidia_output.split(','))
+    except:
+        gpu_util, gpu_mem = -1, -1
+    return cpu, mem, gpu_util, gpu_mem
 
 
 def train_model(sample_size: int):
@@ -66,12 +66,12 @@ def train_model(sample_size: int):
     )
 
     start_time = time.time()
-    cpu_start, mem_start = monitor_resources()
+    cpu_start, mem_start, gpu_start, gpumem_start = monitor_resources()
 
     trainer.train()
 
     end_time = time.time()
-    cpu_end, mem_end = monitor_resources()
+    cpu_end, mem_end, gpu_end, gpumem_end = monitor_resources()
 
     training_time = round(end_time - start_time, 2)
     print(f"Training time for {sample_size} samples: {training_time}s")
@@ -79,7 +79,7 @@ def train_model(sample_size: int):
     os.makedirs('logs', exist_ok=True)
     log_path = os.path.join('logs', 'training_times.csv')
     with open(log_path, 'a') as f:
-        f.write(f"{sample_size},{training_time},{cpu_start},{cpu_end},{mem_start},{mem_end}\n")
+        f.write(f"{sample_size},{training_time},{cpu_start},{cpu_end},{mem_start},{mem_end},{gpu_start},{gpu_end},{gpumem_start},{gpumem_end}\n")
 
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
