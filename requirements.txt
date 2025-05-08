@@ -1,6 +1,15 @@
-transformers>=4.40.0
-datasets
-psutil
-accelerate
-wandb
-torch>=2.1.0
+# Core libraries
+transformers[torch]==4.51.3
+datasets==3.6.0
+accelerate==1.6.0
+
+# Optional logging/monitoring
+wandb==0.19.11
+
+# Required dependencies
+torch>=2.0
+tokenizers==0.21.1
+safetensors>=0.4.3
+
+# Others
+tqdm>=4.27
