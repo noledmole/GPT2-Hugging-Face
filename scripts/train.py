@@ -22,10 +22,7 @@ def load_sample_dataset(sample_size: int):
 
 def train_model(sample_size: int):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    usage_log = f"logs/usage_monitor_{sample_size}_{timestamp}.csv"
     output_dir = f"./models/gpt2-spotify-{sample_size}-{timestamp}"
-
-    monitor_process = subprocess.Popen(["python", "monitor.py", "--logfile", usage_log])
     
     dataset = load_sample_dataset(sample_size)
 
@@ -77,8 +74,6 @@ def train_model(sample_size: int):
     training_time = round(end_time - start_time, 2)
 
     time.sleep(2)
-    monitor_process.terminate()
-    monitor_process.wait()
 
     model.save_pretrained(output_dir)
     tokenizer.save_pretrained(output_dir)
