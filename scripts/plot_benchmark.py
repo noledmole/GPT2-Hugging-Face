@@ -1,5 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
+
+os.makedirs("logs", exist_ok=True)
 
 log_path = 'logs/training_times.csv'
 df = pd.read_csv(log_path, header=None, names=[
