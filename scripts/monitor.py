@@ -9,7 +9,7 @@ os.makedirs("logs", exist_ok=True)
 
 log_path = "logs/usage_monitor.csv"
 
-with open(log_path, 'a', newline='') as f:
+with open(log_path, 'a') as f:
     f.write(f",,,,START OF NEW RUN {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
     writer = csv.writer(f)
     writer.writerow(['unix_timestamp', 'readable_time', 'cpu_percent', 'mem_percent', 'gpu_util', 'gpu_mem'])
