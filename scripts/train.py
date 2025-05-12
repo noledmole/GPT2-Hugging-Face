@@ -5,7 +5,6 @@ import psutil
 import subprocess
 import os
 import datetime
-
 from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
@@ -24,6 +23,7 @@ def load_sample_dataset(sample_size: int):
 def train_model(sample_size: int):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     usage_log = f"logs/usage_monitor_{sample_size}_{timestamp}.csv"
+    output_dir = f"./models/gpt2-spotify-{sample_size}-{timestamp}"
 
     monitor_process = subprocess.Popen(["python", "monitor.py", "--logfile", usage_log])
     
@@ -45,7 +45,7 @@ def train_model(sample_size: int):
     )
 
     training_args = TrainingArguments(
-        output_dir="./models/gpt2-spotify",
+        output_dir=output_dir,
         overwrite_output_dir=True,
         per_device_train_batch_size=8,
         num_train_epochs=3,
@@ -80,9 +80,8 @@ def train_model(sample_size: int):
     monitor_process.terminate()
     monitor_process.wait()
 
-
-    model.save_pretrained("./models/gpt2-spotify")
-    tokenizer.save_pretrained("./models/gpt2-spotify")
+    model.save_pretrained(output_dir)
+    tokenizer.save_pretrained(output_dir)
 
     os.makedirs("logs", exist_ok=True)
     training_log_file = "logs/training_times.csv"

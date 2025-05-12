@@ -12,7 +12,7 @@ args = parser.parse_args()
 
 os.makedirs("logs", exist_ok=True)
 
-with open('logs/usage_monitor.csv', 'w') as f:
+with open(args.logfile, 'w') as f:
     writer = csv.writer(f)
     writer.writerow(['unix_timestamp', 'readable_time', 'cpu_percent', 'mem_percent', 'gpu_util', 'gpu_mem'])
 
