@@ -79,6 +79,7 @@ def train_model(sample_size: int):
     tokenizer.save_pretrained(output_dir)
 
     os.makedirs("logs", exist_ok=True)
+    
     training_log_file = "logs/training_times.csv"
     if not os.path.exists(training_log_file):
         with open(training_log_file, "w") as f:
