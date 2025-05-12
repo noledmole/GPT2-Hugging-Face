@@ -4,12 +4,18 @@ import psutil
 import subprocess
 import os
 import datetime
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--logfile', type=str, default='logs/usage_monitor.csv', help='Path to usage log CSV file')
+args = parser.parse_args()
 
 os.makedirs("logs", exist_ok=True)
 
 with open('logs/usage_monitor.csv', 'w') as f:
     writer = csv.writer(f)
     writer.writerow(['unix_timestamp', 'readable_time', 'cpu_percent', 'mem_percent', 'gpu_util', 'gpu_mem'])
+
 
     print("Resource monitoring started. Logging every 10s to logs/usage_monitor.csv...")
 
@@ -25,6 +31,7 @@ with open('logs/usage_monitor.csv', 'w') as f:
 
         except:
             gpu_util, gpu_mem = 0, 0
-        writer.writerow([time.time(), cpu, mem, gpu_util, gpu_mem])
+
+        writer.writerow([unix_time, readable_time, cpu, mem, gpu_util, gpu_mem])
         time.sleep(10)
 

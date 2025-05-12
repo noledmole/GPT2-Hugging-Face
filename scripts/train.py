@@ -1,4 +1,11 @@
 import argparse
+import time
+import csv
+import psutil
+import subprocess
+import os
+import datetime
+
 from datasets import load_dataset
 from transformers import (
     AutoTokenizer,
@@ -15,6 +22,11 @@ def load_sample_dataset(sample_size: int):
     return ds.shuffle(seed=42).select(range(min(sample_size, len(ds))))
 
 def train_model(sample_size: int):
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    usage_log = f"logs/usage_monitor_{sample_size}_{timestamp}.csv"
+
+    monitor_process = subprocess.Popen(["python", "monitor.py", "--logfile", usage_log])
+    
     dataset = load_sample_dataset(sample_size)
 
     tokenizer = AutoTokenizer.from_pretrained("gpt2")
@@ -53,9 +65,35 @@ def train_model(sample_size: int):
         data_collator=data_collator,
     )
 
-    trainer.train()
+    cpu_start = psutil.cpu_percent()
+    mem_start = psutil.virtual_memory().percent
+    start_time = time.time()
+
+    trainer.train() 
+
+    end_time = time.time()
+    cpu_end = psutil.cpu_percent()
+    mem_end = psutil.virtual_memory().percent
+    training_time = round(end_time - start_time, 2)
+
+    time.sleep(2)
+    monitor_process.terminate()
+    monitor_process.wait()
+
+
     model.save_pretrained("./models/gpt2-spotify")
     tokenizer.save_pretrained("./models/gpt2-spotify")
+
+    os.makedirs("logs", exist_ok=True)
+    training_log_file = "logs/training_times.csv"
+    if not os.path.exists(training_log_file):
+        with open(training_log_file, "w") as f:
+            f.write("sample_size,timestamp,training_time_sec,cpu_start_percent,cpu_end_percent,mem_start_percent,mem_end_percent\n")
+
+    with open(training_log_file, "a") as f:
+        f.write(f"{sample_size},{timestamp},{training_time},{cpu_start},{cpu_end},{mem_start},{mem_end}\n")
+
+    print(f"Training complete. Time: {training_time}s | Log saved to {training_log_file}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
