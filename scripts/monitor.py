@@ -7,7 +7,8 @@ import datetime
 
 os.makedirs("logs", exist_ok=True)
 
-log_path = "logs/usage_monitor.csv"
+log_path = f"logs/usage_monitor_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+
 
 with open(log_path, 'a') as f:
     f.write(f",,,,START OF NEW RUN {datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
@@ -32,6 +33,6 @@ with open(log_path, 'a') as f:
 
             writer.writerow([unix_time, readable_time, cpu, mem, gpu_util, gpu_mem])
             f.flush()
-            time.sleep(10)
+            time.sleep(60)
     except KeyboardInterrupt:
         print("Monitoring stopped.")
