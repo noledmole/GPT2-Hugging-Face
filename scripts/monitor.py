@@ -15,6 +15,7 @@ os.makedirs("logs", exist_ok=True)
 with open(args.logfile, 'w') as f:
     writer = csv.writer(f)
     writer.writerow(['unix_timestamp', 'readable_time', 'cpu_percent', 'mem_percent', 'gpu_util', 'gpu_mem'])
+    f.flush()
 
 
     print("Resource monitoring started. Logging every 10s to logs/usage_monitor.csv...")
