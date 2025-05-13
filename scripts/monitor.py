@@ -7,7 +7,7 @@ import datetime
 
 os.makedirs("logs", exist_ok=True)
 
-log_path = f"logs/usage_monitor_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+log_path = "logs/usage_monitor.csv"
 
 
 with open(log_path, 'a') as f:
