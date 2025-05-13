@@ -15,7 +15,7 @@ with open(log_path, 'a') as f:
     writer = csv.writer(f)
     writer.writerow(['unix_timestamp', 'readable_time', 'cpu_percent', 'mem_percent', 'gpu_util', 'gpu_mem'])
 
-    print("Resource monitoring started. Logging every 10s to logs/usage_monitor.csv...")
+    print("Resource monitoring started. Logging every 60s to logs/usage_monitor.csv...")
 
     try:
         while True:
