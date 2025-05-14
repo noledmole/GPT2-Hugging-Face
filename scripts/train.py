@@ -18,7 +18,9 @@ def load_sample_dataset(sample_size: int):
     ds = load_dataset("noelmurti/spotify_data", split="train")
     ds = ds.filter(lambda row: row.get("song") and row.get("Artist(s)"))
     ds = ds.map(lambda row: {"text": f"{row['song']} - {row['Artist(s)']}"})
-    return ds.shuffle(seed=42).select(range(min(sample_size, len(ds))))
+    subset = ds.shuffle(seed=42).select(range(min(sample_size, len(ds))))
+    print(f"Final dataset passed to training: {len(subset)} samples")
+    return subset
 
 def train_model(sample_size: int):
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
